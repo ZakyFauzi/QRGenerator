@@ -7,7 +7,6 @@
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Custom Tailwind Configuration */
         .fade-in-out {
             animation: fadeInOut 5s ease-in-out;
         }
@@ -93,7 +92,7 @@
         <!-- Customization Options -->
         <div class="mb-8">
             <h2 class="text-lg sm:text-xl font-semibold text-gray-800 mb-4">Kustomisasi Style</h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Warna QR</label>
                     <input type="color" id="fillColor" value="#000000" class="block w-full h-12 rounded-lg border border-gray-300 cursor-pointer">
@@ -103,17 +102,27 @@
                     <input type="color" id="bgColor" value="#ffffff" class="block w-full h-12 rounded-lg border border-gray-300 cursor-pointer">
                 </div>
             </div>
-            <div class="mt-4">
+            <div class="mb-4">
                 <label class="flex items-center text-sm font-medium text-gray-700">
                     <input type="checkbox" id="transparentBg" class="mr-2 h-4 w-4 text-blue-500 focus:ring-blue-400 border-gray-300 rounded">
                     Latar Belakang Transparan
                 </label>
+            </div>            
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Bentuk Modul</label>
+                <select id="moduleStyle" class="block w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition">
+                    <option value="square">Persegi</option>
+                    <option value="rounded">Sudut Membulat</option>
+                    <option value="circle">Lingkaran</option>
+                    <option value="hexagon">Segi Enam</option>
+                    <option value="star">Bintang</option>
+                </select>
             </div>
         </div>
 
         <!-- Logo Upload -->
         <div class="mb-8">
-            <h2 class="text-lg sm:text-xl font-semibold text-gray-800 mb-4">Tambahkan Logo</h2>
+            <h2 class="text-lg sm:text-xl font-semibold text-gray-800 mb-4">Tambahkan Logo (Opsional)</h2>
             <label class="block text-sm font-medium text-gray-700 mb-2">Unggah Logo</label>
             <input type="file" id="logoInput" accept="image/png,image/jpeg,image/jpg" class="block w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition">
         </div>
@@ -217,6 +226,7 @@
             const fillColor = document.getElementById('fillColor').value;
             const transparentBg = document.getElementById('transparentBg').checked;
             const bgColor = transparentBg ? 'rgba(0,0,0,0)' : document.getElementById('bgColor').value;
+            const moduleStyle = document.getElementById('moduleStyle').value;
             const logoFile = document.getElementById('logoInput').files[0];
 
             if (!transparentBg && !checkContrast(fillColor, document.getElementById('bgColor').value)) {
@@ -227,6 +237,7 @@
             qrcodeDiv.innerHTML = '';
             document.getElementById('errorMessage').classList.add('hidden');
             console.log('Generating QR code with data:', data);
+            console.log('Module style selected:', moduleStyle);
             if (logoFile) {
                 console.log('Logo file selected:', { name: logoFile.name, type: logoFile.type, size: (logoFile.size / 1024).toFixed(2) + ' KB' });
             } else {
@@ -253,13 +264,96 @@
 
                 console.log('QR code canvas found:', { width: canvas.width, height: canvas.height });
 
+                const moduleSize = canvas.width / qr._oQRCode.moduleCount;
                 const customCanvas = document.createElement('canvas');
                 customCanvas.width = 400;
                 customCanvas.height = 400;
                 const customCtx = customCanvas.getContext('2d', { alpha: true });
 
-                // Copy the QR code to the custom canvas
-                customCtx.drawImage(canvas, 0, 0);
+                // Handle background
+                if (!transparentBg) {
+                    customCtx.fillStyle = bgColor;
+                    customCtx.fillRect(0, 0, customCanvas.width, customCanvas.height);
+                    console.log('Background color applied:', bgColor);
+                }
+
+                // Draw custom modules
+                for (let row = 0; row < qr._oQRCode.moduleCount; row++) {
+                    for (let col = 0; col < qr._oQRCode.moduleCount; col++) {
+                        if (qr._oQRCode.isDark(row, col)) {
+                            const x = col * moduleSize;
+                            const y = row * moduleSize;
+                            customCtx.fillStyle = fillColor;
+
+                            // Skip drawing in alignment patterns (top-left, top-right, bottom-left)
+                            const isAlignmentPattern =
+                                (row < 7 && col < 7) || // Top-left
+                                (row < 7 && col >= qr._oQRCode.moduleCount - 7) || // Top-right
+                                (row >= qr._oQRCode.moduleCount - 7 && col < 7); // Bottom-left
+
+                            if (!isAlignmentPattern) {
+                                customCtx.beginPath();
+                                if (moduleStyle === 'square') {
+                                    customCtx.rect(x, y, moduleSize, moduleSize);
+                                } else if (moduleStyle === 'rounded') {
+                                    const radius = moduleSize * 0.2;
+                                    customCtx.moveTo(x + radius, y);
+                                    customCtx.arcTo(x + moduleSize, y, x + moduleSize, y + moduleSize, radius);
+                                    customCtx.arcTo(x + moduleSize, y + moduleSize, x, y + moduleSize, radius);
+                                    customCtx.arcTo(x, y + moduleSize, x, y, radius);
+                                    customCtx.arcTo(x, y, x + moduleSize, y, radius);
+                                } else if (moduleStyle === 'circle') {
+                                    customCtx.arc(x + moduleSize / 2, y + moduleSize / 2, moduleSize / 2 * 0.8, 0, Math.PI * 2);
+                                } else if (moduleStyle === 'hexagon') {
+                                    const r = moduleSize / 2 * 0.8;
+                                    customCtx.moveTo(x + moduleSize / 2 + r, y + moduleSize / 2);
+                                    for (let i = 1; i <= 6; i++) {
+                                        const angle = (Math.PI / 3) * i;
+                                        customCtx.lineTo(
+                                            x + moduleSize / 2 + r * Math.cos(angle),
+                                            y + moduleSize / 2 + r * Math.sin(angle)
+                                        );
+                                    }
+                                } else if (moduleStyle === 'star') {
+                                    const outerR = moduleSize / 2 * 0.8;
+                                    const innerR = moduleSize / 2 * 0.4;
+                                    customCtx.moveTo(x + moduleSize / 2, y + moduleSize / 2 - outerR);
+                                    for (let i = 0; i < 5; i++) {
+                                        const angleOuter = (Math.PI / 2.5) * (2 * i + 1) - Math.PI / 2;
+                                        const angleInner = (Math.PI / 2.5) * (2 * i + 2) - Math.PI / 2;
+                                        customCtx.lineTo(
+                                            x + moduleSize / 2 + innerR * Math.cos(angleInner),
+                                            y + moduleSize / 2 + innerR * Math.sin(angleInner)
+                                        );
+                                        customCtx.lineTo(
+                                            x + moduleSize / 2 + outerR * Math.cos(angleOuter + Math.PI / 5),
+                                            y + moduleSize / 2 + outerR * Math.sin(angleOuter + Math.PI / 5)
+                                        );
+                                    }
+                                }
+                                customCtx.closePath();
+                                customCtx.fill();
+                            } else {
+                                // Draw alignment patterns as squares
+                                customCtx.fillStyle = fillColor;
+                                customCtx.fillRect(x, y, moduleSize, moduleSize);
+                            }
+                        }
+                    }
+                }
+
+                // Handle transparency
+                if (transparentBg) {
+                    const imageData = customCtx.getImageData(0, 0, customCanvas.width, customCanvas.height);
+                    const data = imageData.data;
+                    for (let i = 0; i < data.length; i += 4) {
+                        if (data[i] === 255 && data[i + 1] === 255 && data[i + 2] === 255) {
+                            data[i + 3] = 0;
+                        }
+                    }
+                    customCtx.putImageData(imageData, 0, 0);
+                    console.log('Transparency applied by removing white background');
+                }
 
                 // Create empty space in the center by clearing QR modules
                 const emptyAreaSize = 60;
@@ -271,38 +365,12 @@
                 for (let y = emptyAreaY; y < emptyAreaY + emptyAreaSize; y++) {
                     for (let x = emptyAreaX; x < emptyAreaX + emptyAreaSize; x++) {
                         const index = (y * customCanvas.width + x) * 4;
-                        data[index + 3] = 0; // Set alpha to 0 (transparent) in the empty area
+                        data[index + 3] = 0;
                     }
                 }
 
                 customCtx.putImageData(imageData, 0, 0);
                 console.log('Empty area created at:', { x: emptyAreaX, y: emptyAreaY, size: emptyAreaSize });
-
-                // Handle transparency
-                if (transparentBg) {
-                    const finalImageData = customCtx.getImageData(0, 0, customCanvas.width, customCanvas.height);
-                    const finalData = finalImageData.data;
-
-                    for (let i = 0; i < finalData.length; i += 4) {
-                        if (finalData[i] === 255 && finalData[i + 1] === 255 && finalData[i + 2] === 255) {
-                            finalData[i + 3] = 0; // Make white background transparent
-                        }
-                    }
-
-                    customCtx.putImageData(finalImageData, 0, 0);
-                    console.log('Transparency applied by removing white background');
-                } else {
-                    const tempCanvas = document.createElement('canvas');
-                    tempCanvas.width = 400;
-                    tempCanvas.height = 400;
-                    const tempCtx = tempCanvas.getContext('2d');
-                    tempCtx.fillStyle = bgColor;
-                    tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-                    tempCtx.drawImage(customCanvas, 0, 0);
-                    customCtx.clearRect(0, 0, customCanvas.width, customCanvas.height);
-                    customCtx.drawImage(tempCanvas, 0, 0);
-                    console.log('Background color applied:', bgColor);
-                }
 
                 // Add logo if uploaded, placed in the empty area
                 if (logoFile) {
