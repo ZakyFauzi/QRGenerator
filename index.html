@@ -284,7 +284,8 @@
         <div class="mb-6">
             <h2 class="text-lg sm:text-xl font-semibold text-gray-800 mb-4">Tambahkan Logo (Opsional)</h2>
             <label class="block text-sm font-medium mb-2">Unggah Logo</label>
-            <input type="file" id="logoInput" accept="image/png,image/jpeg,image/jpg" class="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-300/50 focus:border-blue-300 transition bg-white/80">
+            <input type="file" id="logoInput" accept="image/png,image/jpeg,image/jpg" class="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-300/50 focus:border-blue-300 transition bg-white/80 mb-2">
+            <button id="removeLogoButton" class="w-full bg-red-300/50 text-white p-2 rounded-lg hover:bg-red-300 focus:ring-2 focus:ring-red-300/50 focus:outline-none transition duration-200 hidden">Hapus Logo</button>
         </div>
 
         <!-- Generate Button -->
@@ -367,6 +368,14 @@
                 generateButton.addEventListener('click', generateQR);
             } else {
                 console.error('Generate button not found in the DOM');
+            }
+
+            // Remove logo button
+            const removeLogoButton = document.getElementById('removeLogoButton');
+            if (removeLogoButton) {
+                removeLogoButton.addEventListener('click', removeLogo);
+            } else {
+                console.error('Remove logo button not found in the DOM');
             }
 
             // Set initial input visibility
@@ -845,6 +854,24 @@
                 }
             }
 
+            function removeLogo() {
+                const logoInput = document.getElementById('logoInput');
+                const removeLogoButton = document.getElementById('removeLogoButton');
+                const qrcodeDiv = document.getElementById('qrcode');
+
+                if (logoInput) {
+                    logoInput.value = ''; // Hapus file yang dipilih
+                }
+                if (removeLogoButton) {
+                    removeLogoButton.classList.add('hidden'); // Sembunyikan tombol hapus
+                }
+                if (qrcodeDiv) {
+                    qrcodeDiv.innerHTML = ''; // Hapus pratinjau QR code
+                }
+
+                console.log('Logo removed successfully');
+            }
+
             // Close dropdown/color picker when clicking outside
             document.addEventListener('click', (e) => {
                 if (openDropdown && !e.target.closest('.custom-dropdown')) {
@@ -856,6 +883,19 @@
                     openColorPicker = null;
                 }
             });
+
+            // Update remove logo button visibility when file input changes
+            const logoInput = document.getElementById('logoInput');
+            if (logoInput) {
+                logoInput.addEventListener('change', () => {
+                    const removeLogoButton = document.getElementById('removeLogoButton');
+                    if (removeLogoButton && logoInput.files.length > 0) {
+                        removeLogoButton.classList.remove('hidden');
+                    } else if (removeLogoButton) {
+                        removeLogoButton.classList.add('hidden');
+                    }
+                });
+            }
         });
     </script>
 </body>
